@@ -1,0 +1,2483 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Metadata Optimizer – Ranking Masters (V7)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9fa;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e3f2fd;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+        }
+
+        .stat-card .label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .stat-card .icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .filter-checkbox:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .filter-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .filter-checkbox.active {
+            background: #e3f2fd;
+            border-color: #667eea;
+        }
+
+        .device-toggle {
+            display: flex;
+            gap: 10px;
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .device-btn {
+            flex: 1;
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .device-btn:hover {
+            background: #f8f9fa;
+        }
+
+        .device-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #f8f9fa;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        tbody tr.selected {
+            background: #e3f2fd;
+        }
+
+        .url-cell {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #1a0dab;
+            cursor: pointer;
+        }
+
+        .url-cell:hover {
+            text-decoration: underline;
+        }
+
+        .metadata-cell {
+            max-width: 300px;
+        }
+
+        .metadata-text {
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 5px;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.4;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .metadata-text:hover {
+            background: #f0f0f0;
+        }
+
+        .metadata-text.editing {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            outline: none;
+        }
+
+        .old-metadata {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-left: 3px solid #ddd;
+            font-style: italic;
+        }
+
+        .old-metadata-label {
+            font-weight: 600;
+            color: #888;
+            margin-bottom: 4px;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .old-metadata div {
+            color: #999;
+            line-height: 1.4;
+            margin-top: 2px;
+        }
+
+        .metadata-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .score-badge.perfect {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .score-badge.good {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .score-badge.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .score-badge.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.perfect {
+            background: linear-gradient(90deg, #27ae60 0%, #229954 100%);
+        }
+
+        .progress-fill.good {
+            background: linear-gradient(90deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .progress-fill.error {
+            background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .status-icon {
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .icon-btn {
+            padding: 6px 10px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .icon-btn:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .close-btn {
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.active {
+            display: block;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 24px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+        }
+
+        .checkbox-cell {
+            text-align: center;
+            width: 50px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .column-mapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .mapper-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mapper-field label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .mapper-field select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .mapper-field select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Badges and progress */
+        .progress-fill.perfect{ background: linear-gradient(90deg, var(--rm-green), var(--rm-dark)) !important; }
+        .progress-fill.good{ background: linear-gradient(90deg, var(--rm-cta), var(--rm-primary)) !important; }
+
+        /* Global drag overlay */
+        .drop-overlay{ position:fixed; inset:0; background:rgba(8,40,140,0.75); color:#fff; display:none; align-items:center; justify-content:center; z-index:2000; text-align:center; font-family:Ubuntu,'Open Sans',Arial,sans-serif; transition:opacity .3s ease; }
+        .drop-overlay.active{ display:flex; }
+        .drop-overlay .drop-overlay-content{ border:3px dashed rgba(255,255,255,0.6); padding:40px 60px; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,.15); font-size:24px; line-height:1.4; }
+    </style>
+  <!-- Ranking Masters brand fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Exo:400,500,600,700&display=swap" rel="stylesheet">
+  
+  <!-- Ranking Masters brand overrides -->
+  <style id="rm-brand-overrides">
+    :root{
+      --rm-primary:#08288C; --rm-primary-variant:#08288B; --rm-cta:#F16B37; --rm-cta-hover:#EF6030; --rm-dark:#2B469C; --rm-green:#6ACC50; --rm-bg:#F9FAFC;
+    }
+    body{ background: var(--rm-bg); font-family: 'Open Sans', Ubuntu, Arial, sans-serif; }
+    .container{ box-shadow: 0 20px 60px rgba(8,40,140,.08),0 4px 16px rgba(8,40,140,.10); border-radius: 14px; }
+    .header{ background: var(--rm-primary) !important; color:#fff; display:flex; align-items:center; justify-content:flex-start; gap:20px; padding:24px 28px !important; }
+    .header-texts{ display:flex; flex-direction:column; gap:6px; }
+    .header-texts h1{ font-family: Ubuntu, 'Open Sans', Arial, sans-serif; font-weight:700; letter-spacing:.2px; margin:0; font-size:32px; color:#fff; }
+    .header-texts p{ margin:0; opacity:.92; font-family: Ubuntu, Arial, sans-serif; }
+    .logo-link{ display:inline-block; transition:opacity .25s ease; }
+    .logo-link:hover{ opacity:.85; }
+    .logo{ height:45px; width:auto; display:block; }
+    @media (max-width: 768px){ .logo{ height:35px; } .header{ flex-direction:column; align-items:flex-start; gap:8px; } .header-texts{ align-items:flex-start; } }
+
+    /* Buttons */
+    .btn, .btn-primary{ background: var(--rm-cta) !important; color:#fff !important; border:none !important; border-radius:50px !important; font-family: Ubuntu, Arial, sans-serif !important; font-weight:700 !important; text-shadow:0 1px 2px rgba(0,0,0,.08); transition: all .3s ease; }
+    .btn:hover, .btn-primary:hover{ background: linear-gradient(135deg,#667eea 0%,#764ba2 100%) !important; color:#fff !important; box-shadow:0 8px 25px rgba(102,126,234,0.22); }
+    .btn-secondary{ background:#fff !important; color:var(--rm-primary) !important; border:2px solid var(--rm-primary) !important; font-weight:600 !important; transition: all .3s ease; }
+    .btn-secondary:hover{ background: var(--rm-cta) !important; color:#fff !important; border-color:var(--rm-cta) !important; box-shadow:0 8px 20px rgba(241,107,55,0.25); }
+    .btn-danger{ background:#fff !important; color:#D12E2E !important; border:2px solid #D12E2E !important; }
+
+    /* Upload area */
+    .upload-area{ border: 3px dashed var(--rm-primary) !important; color: var(--rm-primary-variant) !important; background:#fff !important; }
+    .upload-area:hover, .upload-area.dragover{ border-color: var(--rm-cta) !important; background:#f6f9ff !important; }
+
+    /* Sections & cards */
+    .section{ background:#fff; border:1px solid #e6eaf5; }
+    thead{ background: var(--rm-primary) !important; }
+
+    /* Inputs */
+    .section input[type="text"], .section textarea{ background:#f9f9f9; border:none; border-bottom:2px solid #eee; font-family:'Open Sans', Ubuntu, Arial, sans-serif; font-size:16px; }
+    .section input[type="text"]:focus, .section textarea:focus{ border-bottom:2px solid var(--rm-cta); outline:none; }
+
+    /* Badges and progress */
+    .progress-fill.perfect{ background: linear-gradient(90deg, var(--rm-green), var(--rm-dark)) !important; }
+    .progress-fill.good{ background: linear-gradient(90deg, var(--rm-cta), var(--rm-primary)) !important; }
+  </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="https://www.rankingmasters.nl" class="logo-link" target="_blank" rel="noopener noreferrer">
+                <img src="new-logo-rankingmasters.svg" alt="Ranking Masters" class="logo" />
+            </a>
+            <div class="header-texts">
+                <h1>📊 Bulk Metadata Optimizer</h1>
+                <p>Optimaliseer metadata op basis van pixelbreedte</p>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Alert Messages -->
+            <div id="alertContainer"></div>
+
+            <!-- Upload Section -->
+            <div class="section" id="uploadSection">
+                <h2>📁 CSV Upload</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <h3>Sleep een CSV bestand hierheen of klik om te uploaden</h3>
+                    <p style="margin-top: 10px; color: #666;">Vereiste kolommen: URL, Metatitel, Metabeschrijving</p>
+                    <input type="file" id="fileInput" accept=".csv">
+                </div>
+                <div id="uploadedFileInfo" style="display: none; margin-top: 15px; padding: 12px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #4caf50;">
+                    <strong>✅ Bestand geladen:</strong> <span id="uploadedFileName"></span>
+                    <button onclick="resetUpload()" style="float: right; background: #ff5722; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Nieuw bestand uploaden</button>
+                </div>
+            </div>
+
+            <!-- Column Mapping Modal -->
+            <div class="modal" id="columnMapperModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🗂️ Kolommen Koppelen</h3>
+                        <button class="close-btn" onclick="closeColumnMapper()">&times;</button>
+                    </div>
+                    <p style="margin-bottom: 20px; color: #666;">
+                        Koppel de kolommen uit uw CSV aan de vereiste velden:
+                    </p>
+                    <div class="column-mapper" id="columnMapper"></div>
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="applyColumnMapping()" style="flex: 1;">
+                            ✓ Toepassen
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeColumnMapper()" style="flex: 1;">
+                            Annuleren
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Dashboard -->
+            <div class="section" id="statsSection" style="display: none;">
+                <h2>📊 Statistieken</h2>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <!-- Filters & Controls -->
+            <div class="section" id="controlsSection" style="display: none;">
+                <h2>🎯 Filters & Instellingen</h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">📱 Device Optimalisatie:</label>
+                    <div class="device-toggle">
+                        <button class="device-btn active" data-device="mobile" onclick="switchDevice('mobile')">
+                            📱 Mobile First (550px)
+                        </button>
+                        <button class="device-btn" data-device="desktop" onclick="switchDevice('desktop')">
+                            🖥️ Desktop (525px)
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">
+                        Selecteer welke metadata geoptimaliseerd moet worden:
+                    </label>
+                    <div class="filters">
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filterError" onchange="applyFilters()">
+                            <span>❌ Fout (&lt;0% of &gt;100%)</span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filterWarning" onchange="applyFilters()">
+                            <span>⚠️ Optimalisatie noodzakelijk (0-90%)</span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filterGood" onchange="applyFilters()">
+                            <span>💡 Optimalisatie mogelijk (90-99%)</span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filterPerfect" onchange="applyFilters()">
+                            <span>✅ Perfect (100%)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="selectAll()">
+                        ☑️ Selecteer alles
+                    </button>
+                    <button class="btn btn-secondary" onclick="deselectAll()">
+                        ☐ Deselecteer alles
+                    </button>
+                    <button class="btn btn-primary" onclick="optimizeSelected()" id="optimizeBtn" disabled>
+                        ✨ Optimaliseer geselecteerde
+                    </button>
+                    <button class="btn btn-danger" onclick="resetAll()">
+                        🔄 Reset alles
+                    </button>
+                    <button class="btn btn-success" onclick="exportCSV()" id="exportBtn">
+                        📥 Download CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>Bezig met optimaliseren...</p>
+            </div>
+
+            <!-- Data Table -->
+            <div class="table-container" id="tableContainer" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes()">
+                            </th>
+                            <th>URL</th>
+                            <th>Metatitel</th>
+                            <th>Metabeschrijving</th>
+                            <th>Status</th>
+                            <th>Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state-icon">📊</div>
+                <h3>Geen data geladen</h3>
+                <p>Upload een CSV bestand om te beginnen met optimaliseren</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let metadataRows = [];
+        let originalData = [];
+        let currentDevice = 'mobile';
+        let csvHeaders = [];
+        let columnMapping = {
+            url: null,
+            title: null,
+            description: null
+        };
+        
+        // Debouncing voor real-time updates
+        let updateTimers = {};
+        const UPDATE_DELAY = 500; // milliseconds
+
+        // Metadata Validator Class (from previous tool)
+        class MetadataValidator {
+            constructor() {
+                this.limits = {
+                    title: {
+                        desktop: 525,
+                        mobile: 550,
+                        font: '18px Arial'
+                    },
+                    description: {
+                        desktop: 930,
+                        mobile: 930,
+                        minimum: 430,
+                        font: '14px Arial'
+                    }
+                };
+                
+                this.canvas = document.createElement('canvas');
+                this.context = this.canvas.getContext('2d');
+            }
+
+            measureText(text, font) {
+                if (!text) return 0;
+                this.context.font = font;
+                return this.context.measureText(text).width;
+            }
+
+            validateTitle(title, device = 'mobile') {
+                const width = this.measureText(title, this.limits.title.font);
+                const limit = this.limits.title[device];
+                
+                return {
+                    width: Math.round(width),
+                    limit: limit,
+                    percentage: Math.round((width / limit) * 100),
+                    status: this.getStatus(width, limit)
+                };
+            }
+
+            validateDescription(description, device = 'mobile') {
+                const width = this.measureText(description, this.limits.description.font);
+                const limit = this.limits.description[device];
+                const minimum = this.limits.description.minimum;
+                
+                return {
+                    width: Math.round(width),
+                    limit: limit,
+                    minimum: minimum,
+                    percentage: Math.round((width / limit) * 100),
+                    status: this.getStatus(width, limit, minimum)
+                };
+            }
+
+            getStatus(width, limit, minimum = 0) {
+                const percentage = (width / limit) * 100;
+                
+                if (width < minimum || width > limit) {
+                    return 'error'; // ❌
+                } else if (percentage < 90) {
+                    return 'warning'; // ⚠️
+                } else if (percentage < 100) {
+                    return 'good'; // 💡
+                } else {
+                    return 'perfect'; // ✅
+                }
+            }
+
+            getStatusIcon(status) {
+                const icons = {
+                    error: '❌',
+                    warning: '⚠️',
+                    good: '💡',
+                    perfect: '✅'
+                };
+                return icons[status] || '❓';
+            }
+
+            truncateText(text, maxWidth, font) {
+                if (!text) return '';
+                
+                this.context.font = font;
+                
+                if (this.context.measureText(text).width <= maxWidth) {
+                    return text;
+                }
+
+                let truncated = text;
+                while (this.context.measureText(truncated + '...').width > maxWidth && truncated.length > 0) {
+                    truncated = truncated.slice(0, -1);
+                }
+
+                // Truncate on word boundary
+                truncated = truncated.trim().replace(/\s+\S*$/, '');
+                return truncated + '...';
+            }
+
+            expandText(text, targetWidth, font, suffix = '') {
+                if (!text) return '';
+                
+                this.context.font = font;
+                let expanded = text;
+                
+                // Add suffix if provided and fits
+                if (suffix && this.context.measureText(expanded + ' ' + suffix).width <= targetWidth) {
+                    expanded += ' ' + suffix;
+                }
+                
+                return expanded;
+            }
+        }
+
+        const validator = new MetadataValidator();
+
+        // Intelligent Content Cleaner - Applied BEFORE pixel optimization
+        class ContentCleaner {
+            constructor() {
+                this.callToActions = [
+                    'bestel', 'koop', 'ontdek', 'bekijk', 'shop', 'kies', 'probeer',
+                    'download', 'vraag', 'lees', 'vergelijk', 'profiteer', 'reserveer',
+                    'schrijf in', 'meld je aan', 'neem contact', 'bel'
+                ];
+                
+                this.synonyms = {
+                    'bestel': ['koop', 'shop', 'order'],
+                    'koop': ['bestel', 'aanschaf', 'shop'],
+                    'bekijk': ['ontdek', 'zie', 'verken', 'bekijk'],
+                    'online': ['digitaal', 'via internet', 'webshop'],
+                    'direct': ['meteen', 'nu', 'snel', 'vandaag'],
+                    'gratis': ['kosteloos', 'zonder kosten', 'free'],
+                    'snel': ['vlug', 'rap', 'direct', 'spoedig']
+                };
+            }
+
+            // Main cleaning function
+            cleanMetadata(text, type = 'title') {
+                if (!text) return text;
+                
+                try {
+                    // Step 1: Clean filename artifacts
+                    text = this.cleanFilenames(text);
+                    
+                    // Step 2: Remove duplicate sentences (for descriptions)
+                    if (type === 'description') {
+                        text = this.removeDuplicateSentences(text);
+                    }
+                    
+                    // Step 3: Remove duplicate words
+                    text = this.removeDuplicateWords(text, type);
+                    
+                    // Step 4: Fix repetitions within 5 words
+                    text = this.fixCloseRepetitions(text);
+                    
+                    // Step 5: Limit call-to-actions
+                    text = this.limitCallToActions(text);
+                    
+                    // Step 6: Clean up spacing and punctuation
+                    text = this.cleanupFormatting(text);
+                    
+                    return text;
+                } catch (error) {
+                    console.error('Error in cleanMetadata:', error);
+                    // Return original text if cleaning fails
+                    return text;
+                }
+            }
+
+            // Remove duplicate or very similar sentences
+            removeDuplicateSentences(text) {
+                // Split on sentence boundaries
+                const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+                
+                if (sentences.length <= 1) return text;
+                
+                const uniqueSentences = [];
+                const seenSentences = new Set();
+                
+                for (let sentence of sentences) {
+                    // Normalize: lowercase, remove extra spaces, remove punctuation
+                    const normalized = sentence.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+                    
+                    // Skip if we've seen this exact sentence
+                    if (seenSentences.has(normalized)) {
+                        console.log('Removed duplicate sentence:', sentence);
+                        continue;
+                    }
+                    
+                    // Check similarity with existing sentences
+                    let isDuplicate = false;
+                    for (let seen of seenSentences) {
+                        const similarity = this.calculateSimilarity(normalized, seen);
+                        if (similarity > 0.7) { // 70% similarity threshold
+                            console.log('Removed similar sentence:', sentence, '(similar to existing)');
+                            isDuplicate = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!isDuplicate) {
+                        uniqueSentences.push(sentence);
+                        seenSentences.add(normalized);
+                    }
+                }
+                
+                return uniqueSentences.join('. ') + (uniqueSentences.length > 0 ? '.' : '');
+            }
+            
+            // Calculate word-level similarity between two sentences
+            calculateSimilarity(str1, str2) {
+                const words1 = new Set(str1.split(/\s+/));
+                const words2 = new Set(str2.split(/\s+/));
+                
+                // Count common words
+                let common = 0;
+                for (let word of words1) {
+                    if (words2.has(word)) common++;
+                }
+                
+                // Jaccard similarity
+                const union = words1.size + words2.size - common;
+                return union > 0 ? common / union : 0;
+            }
+
+            // Remove filename patterns
+            cleanFilenames(text) {
+                // Pattern: bestand.HASH.extensie (bijv. BasicIcon.CDpvSQlU.css)
+                text = text.replace(/([a-zA-Z0-9_-]+)\.[a-zA-Z0-9]{6,}\.(css|js|png|jpg|jpeg|gif|webp|svg)/gi, '$1');
+                
+                // Pattern: standaard extensies
+                text = text.replace(/\.(png|jpg|jpeg|gif|webp|svg|pdf|doc|docx|css|js|html|htm)/gi, '');
+                
+                // Pattern: nummer-resolutie zoals 150x150, 1920x1080
+                text = text.replace(/\s*\d+x\d+/gi, '');
+                
+                // Pattern: trailing numbers like "image 123" of "Voor Webshop 39"
+                text = text.replace(/\s+\d+(?=\s|$|\.)/g, '');
+                
+                // Pattern: "Ontwerp Zonder Titel" → "Modern ontwerp"
+                if (text.match(/ontwerp zonder titel|untitled|naamloos|zonder naam/i)) {
+                    text = text.replace(/ontwerp zonder titel \d*/gi, 'Modern ontwerp');
+                    text = text.replace(/untitled \d*/gi, 'Design');
+                    text = text.replace(/naamloos \d*/gi, 'Uniek ontwerp');
+                }
+                
+                // Replace underscores and multiple hyphens with spaces
+                text = text.replace(/_+/g, ' ');
+                text = text.replace(/-{2,}/g, ' ');
+                
+                // Clean up extra spaces
+                text = text.replace(/\s+/g, ' ');
+                
+                return text.trim();
+            }
+
+            // Remove duplicate words (max 1x in title, max 2x in description)
+            removeDuplicateWords(text, type = 'title') {
+                const maxOccurrences = type === 'title' ? 1 : 2;
+                const words = text.split(/\s+/);
+                const wordCount = {};
+                const result = [];
+                
+                for (let word of words) {
+                    const cleanWord = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    
+                    // Skip very short words and common words
+                    if (cleanWord.length <= 2 || ['de', 'het', 'een', 'en', 'of', 'is'].includes(cleanWord)) {
+                        result.push(word);
+                        continue;
+                    }
+                    
+                    wordCount[cleanWord] = (wordCount[cleanWord] || 0) + 1;
+                    
+                    if (wordCount[cleanWord] <= maxOccurrences) {
+                        result.push(word);
+                    } else {
+                        // Try to replace with synonym
+                        const synonym = this.getSynonym(cleanWord, wordCount);
+                        if (synonym && !wordCount[synonym]) {
+                            result.push(synonym);
+                            wordCount[synonym] = 1;
+                        }
+                        // Otherwise skip the word
+                    }
+                }
+                
+                return result.join(' ');
+            }
+
+            // Fix repetitions within 5 words distance
+            fixCloseRepetitions(text) {
+                const words = text.split(/\s+/);
+                const result = [];
+                
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i];
+                    const cleanWord = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    
+                    // Check previous 5 words
+                    let isDuplicate = false;
+                    for (let j = Math.max(0, i - 5); j < i; j++) {
+                        const prevClean = words[j].toLowerCase().replace(/[^a-z0-9]/g, '');
+                        if (cleanWord === prevClean && cleanWord.length > 3) {
+                            isDuplicate = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!isDuplicate) {
+                        result.push(word);
+                    } else {
+                        // Try synonym
+                        const synonym = this.getSynonym(cleanWord, {});
+                        if (synonym) {
+                            result.push(synonym);
+                        }
+                    }
+                }
+                
+                return result.join(' ');
+            }
+
+            // Limit to maximum 1 call-to-action
+            limitCallToActions(text) {
+                let ctaCount = 0;
+                const words = text.split(/\s+/);
+                const result = [];
+                
+                for (let word of words) {
+                    const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
+                    
+                    if (this.callToActions.some(cta => cleanWord.includes(cta))) {
+                        ctaCount++;
+                        if (ctaCount <= 1) {
+                            result.push(word);
+                        }
+                        // Skip additional CTAs
+                    } else {
+                        result.push(word);
+                    }
+                }
+                
+                return result.join(' ');
+            }
+
+            // Get synonym for a word
+            getSynonym(word, usedWords = {}) {
+                const lowerWord = word.toLowerCase();
+                
+                if (this.synonyms[lowerWord]) {
+                    for (let syn of this.synonyms[lowerWord]) {
+                        if (!usedWords[syn]) {
+                            return syn;
+                        }
+                    }
+                }
+                
+                return null;
+            }
+
+            // Clean up formatting
+            cleanupFormatting(text) {
+                // Remove multiple spaces
+                text = text.replace(/\s+/g, ' ');
+                
+                // Fix spacing around pipes
+                text = text.replace(/\s*\|\s*/g, ' | ');
+                
+                // Remove duplicate punctuation
+                text = text.replace(/\.{2,}/g, '.');
+                text = text.replace(/!{2,}/g, '!');
+                
+                // Remove trailing punctuation (except ! which is allowed)
+                text = text.replace(/[.,;:]+$/, '');
+                
+                // Remove duplicate call-to-action phrases
+                text = text.replace(/\b(nu|direct|online)\s+(nu|direct|online)\b/gi, '$1');
+                
+                return text.trim();
+            }
+        }
+
+        const contentCleaner = new ContentCleaner();
+
+        // Optimization Engine
+        class OptimizationEngine {
+            optimizeTitle(title, url, device = 'mobile', row) {
+                try {
+                    if (!title || title.trim() === '' || validator.validateTitle(title, device).percentage < 80) {
+                        title = this.generateTitleFromURL(url, row);
+                    }
+                    // STEP 1: INTELLIGENT CONTENT CLEANING
+                    title = contentCleaner.cleanMetadata(title, 'title');
+                    const limit = validator.limits.title[device];
+                    let result = validator.validateTitle(title, device);
+                    const softSuffixes = [' | Bekijk nu', ' | Shop online', ' | Altijd voordeel'];
+                    if (row && row.Brand) {
+                        softSuffixes.push(' | ' + row.Brand.trim());
+                    }
+                    let padIdx = 0;
+                    let padNumber = 2;
+                    while (result.percentage < 90 && result.percentage < 100) {
+                        let toAdd = softSuffixes[padIdx % softSuffixes.length];
+                        let candidate = title + toAdd;
+                        let candResult = validator.validateTitle(candidate, device);
+                        if (candResult.percentage >= 90 && candResult.percentage <= 100) {
+                            title = candidate;
+                            result = candResult;
+                            break;
+                        }
+                        if (candResult.percentage < 100) {
+                            title = candidate;
+                            result = candResult;
+                        } else {
+                            // If adding the suffix would overshoot, just pad as much as fits
+                            break;
+                        }
+                        padIdx++;
+                        // Safety net: if stuck in too short, add a number (never hits real 100+)
+                        if (padIdx > 6 && result.percentage < 85) {
+                            title = title + ' ' + padNumber;
+                            result = validator.validateTitle(title, device);
+                            padNumber++;
+                        }
+                        if (padIdx > 12) break;
+                    }
+                    // If too long, strictly truncate
+                    if (result.percentage > 100) {
+                        title = validator.truncateText(title, limit, validator.limits.title.font);
+                    }
+                    return title;
+                } catch (error) {
+                    console.error('Error in optimizeTitle:', error);
+                    return title;
+                }
+            }
+
+            truncateTitle(title, limit) {
+                // Remove brand name if present (after |)
+                if (title.includes('|')) {
+                    const parts = title.split('|');
+                    const mainPart = parts[0].trim();
+                    
+                    const mainWidth = validator.measureText(mainPart, validator.limits.title.font);
+                    if (mainWidth <= limit) {
+                        return mainPart;
+                    }
+                }
+
+                // Truncate on word boundary
+                return validator.truncateText(title, limit, validator.limits.title.font);
+            }
+
+            expandTitle(title, limit, url) {
+                // Extract potential keywords from URL
+                const urlParts = url.split('/').pop().split('-');
+                const keywords = urlParts.filter(p => p.length > 3);
+                
+                // Try adding brand or suffix
+                const suffixes = [' | Bekijk nu', ' | Bestel online', ' | Gratis verzending'];
+                
+                for (let suffix of suffixes) {
+                    const expanded = title + suffix;
+                    const width = validator.measureText(expanded, validator.limits.title.font);
+                    if (width <= limit && width >= limit * 0.9) {
+                        return expanded;
+                    }
+                }
+
+                return title;
+            }
+
+            optimizeDescription(description, url, device = 'mobile', row) {
+                try {
+                    if (!description || description.trim() === '' || validator.validateDescription(description, device).percentage < 80) {
+                        description = this.generateDescriptionFromURL(url, row);
+                    }
+                    description = contentCleaner.cleanMetadata(description, 'description');
+                    const limit = validator.limits.description[device];
+                    let result = validator.validateDescription(description, device);
+                    const softSuffixes = ['. Bestel nu.', '. Altijd voordeel.', '. Bekijk het aanbod.'];
+                    if (row && row.Brand) {
+                        softSuffixes.push('. ' + row.Brand.trim() + '.');
+                    }
+                    let padIdx = 0;
+                    let padNumber = 2;
+                    while (result.percentage < 90 && result.percentage < 100) {
+                        let toAdd = softSuffixes[padIdx % softSuffixes.length];
+                        let candidate = description + toAdd;
+                        let candResult = validator.validateDescription(candidate, device);
+                        if (candResult.percentage >= 90 && candResult.percentage <= 100) {
+                            description = candidate;
+                            result = candResult;
+                            break;
+                        }
+                        if (candResult.percentage < 100) {
+                            description = candidate;
+                            result = candResult;
+                        } else {
+                            break;
+                        }
+                        padIdx++;
+                        if (padIdx > 6 && result.percentage < 85) {
+                            description = description + ' ' + padNumber;
+                            result = validator.validateDescription(description, device);
+                            padNumber++;
+                        }
+                        if (padIdx > 12) break;
+                    }
+                    if (result.percentage > 100) {
+                        description = validator.truncateText(description, limit, validator.limits.description.font);
+                    }
+                    return description;
+                } catch (error) {
+                    console.error('Error in optimizeDescription:', error);
+                    return description;
+                }
+            }
+
+            truncateDescription(description, limit) {
+                // Try removing last sentence first
+                const sentences = description.split(/[.!?]+/);
+                if (sentences.length > 1) {
+                    for (let i = sentences.length - 1; i > 0; i--) {
+                        const truncated = sentences.slice(0, i).join('. ').trim() + '.';
+                        const width = validator.measureText(truncated, validator.limits.description.font);
+                        if (width <= limit) {
+                            return truncated;
+                        }
+                    }
+                }
+
+                // Truncate on word boundary
+                return validator.truncateText(description, limit, validator.limits.description.font);
+            }
+
+            expandDescription(description, limit, url) {
+                // Add call-to-action or additional info
+                const additions = [
+                    ' Bestel nu online.',
+                    ' Gratis verzending vanaf €50.',
+                    ' Bekijk ons volledige assortiment.',
+                    ' Snel en veilig bestellen.'
+                ];
+
+                for (let addition of additions) {
+                    const expanded = description + addition;
+                    const width = validator.measureText(expanded, validator.limits.description.font);
+                    if (width <= limit && width >= Math.min(limit * 0.9, validator.limits.description.minimum)) {
+                        return expanded;
+                    }
+                }
+
+                return description;
+            }
+
+            generateTitleFromURL(url, row) {
+                const brand = row && row.Brand ? row.Brand.trim() : '';
+                if (row) return this.buildContextualTitle(row,url,brand);
+                return this.titleFromSlug(url) || 'Pagina Titel';
+            }
+
+            generateDescriptionFromURL(url, row) {
+                const brand = row && row.Brand ? row.Brand.trim() : '';
+                let base = this.buildContextualTitle(row,url,brand);
+                let details = '';
+                if (row) {
+                    let arr = [];
+                    ['USP','USPs','H2','h2','Voordelen','Kenmerken'].forEach(f=>{if(row[f])arr.push(row[f])});
+                    details = arr.join(' | ');
+                }
+                if(details) base += ' – ' + details;
+                let cta = 'Bekijk nu';
+                if (url && /product/.test(url)) cta = 'Bestel direct';
+                if (url && /categorie|collectie|category/.test(url)) cta = 'Shop het assortiment';
+                return `${base}. ${cta}. ${brand}.`;
+            }
+
+            // New helper functions for 95-100% targeting
+            truncateToTarget(text, targetWidth, font) {
+                // First try removing brand name if present
+                if (text.includes('|')) {
+                    const parts = text.split('|');
+                    const mainPart = parts[0].trim();
+                    const mainWidth = validator.measureText(mainPart, font);
+                    
+                    if (mainWidth <= targetWidth) {
+                        return mainPart;
+                    }
+                    text = mainPart;
+                }
+                
+                // Iteratively remove words until we fit
+                let words = text.split(' ');
+                while (words.length > 3) {
+                    const candidate = words.join(' ');
+                    const width = validator.measureText(candidate, font);
+                    
+                    if (width <= targetWidth) {
+                        // Add punctuation if missing
+                        if (!candidate.match(/[.!?]$/)) {
+                            return candidate + '.';
+                        }
+                        return candidate;
+                    }
+                    
+                    words.pop();
+                }
+                
+                return words.join(' ') + '.';
+            }
+
+            expandToTarget(text, targetWidth, font, type) {
+                const currentWidth = validator.measureText(text, font);
+                
+                if (type === 'title') {
+                    const suffixes = [
+                        ' | Bekijk nu',
+                        ' | Bestel online',
+                        ' | Shop nu',
+                        ' | Meer info'
+                    ];
+                    
+                    // Try each suffix
+                    for (let suffix of suffixes) {
+                        const candidate = text + suffix;
+                        const width = validator.measureText(candidate, font);
+                        if (width >= targetWidth * 0.95 && width <= targetWidth) {
+                            return candidate;
+                        }
+                    }
+                    
+                    // If none fit, return with first suffix
+                    return text + suffixes[0];
+                } else {
+                    // Description
+                    const additions = [
+                        ' Bestel nu online.',
+                        ' Gratis verzending vanaf €50.',
+                        ' Bekijk ons volledige assortiment.',
+                        ' Snel en veilig bestellen.'
+                    ];
+                    
+                    // Try each addition
+                    for (let addition of additions) {
+                        const candidate = text + addition;
+                        const width = validator.measureText(candidate, font);
+                        if (width >= targetWidth * 0.95 && width <= targetWidth) {
+                            return candidate;
+                        }
+                    }
+                    
+                    // If none fit, return with first addition
+                    return text + additions[0];
+                }
+            }
+            
+            // SMART expansion that avoids duplicate words
+            expandToTargetClean(text, minWidth, maxWidth, font, type, url) {
+                // Get list of words already in text
+                const existingWords = new Set(
+                    text.toLowerCase()
+                        .split(/\s+/)
+                        .map(w => w.replace(/[^a-z0-9]/g, ''))
+                        .filter(w => w.length > 3)
+                );
+                
+                if (type === 'title') {
+                    const suffixes = [
+                        ' | Bekijk direct',
+                        ' | Shop vandaag',
+                        ' | Gratis verzending',
+                        ' | Snel geleverd',
+                        ' | Direct leverbaar',
+                        ' | Altijd voordelig',
+                        ' | Groot assortiment'
+                    ];
+                    
+                    // Try each suffix, checking for duplicate words
+                    for (let suffix of suffixes) {
+                        const suffixWords = suffix.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z0-9]/g, ''));
+                        const hasDuplicate = suffixWords.some(w => w.length > 3 && existingWords.has(w));
+                        
+                        if (!hasDuplicate) {
+                            const candidate = text + suffix;
+                            const width = validator.measureText(candidate, font);
+                            if (width >= minWidth && width <= maxWidth) {
+                                return candidate;
+                            }
+                        }
+                    }
+                } else {
+                    // Description
+                    const additions = [
+                        ' Gratis verzending vanaf €50.',
+                        ' Snel en veilig afrekenen.',
+                        ' 14 dagen bedenktijd.',
+                        ' Direct leverbaar uit voorraad.',
+                        ' Vandaag besteld, morgen in huis.',
+                        ' Bekijk alle specificaties.',
+                        ' Lees klantervaringen en reviews.',
+                        ' Profiteer van onze scherpe prijzen.'
+                    ];
+                    
+                    let expanded = text;
+                    
+                    for (let addition of additions) {
+                        const additionWords = addition.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z0-9]/g, ''));
+                        const hasDuplicate = additionWords.some(w => w.length > 3 && existingWords.has(w));
+                        
+                        if (!hasDuplicate) {
+                            const candidate = expanded + addition;
+                            const width = validator.measureText(candidate, font);
+                            
+                            if (width >= minWidth && width <= maxWidth) {
+                                return candidate;
+                            }
+                            
+                            if (width < maxWidth) {
+                                expanded = candidate;
+                                // Add these words to existing set
+                                additionWords.forEach(w => {
+                                    if (w.length > 3) existingWords.add(w);
+                                });
+                            }
+                        }
+                    }
+                    
+                    return expanded;
+                }
+                
+                // Fallback: return original text
+                return text;
+            }
+
+            // --- Helper: heuristics for extracting meta from a row based on all context ---
+            buildContextualTitle(row, url, brand) {
+                let pageType = 'pagina';
+                const pathname = (url || '').split('?')[0];
+                if (/product|artikel|item|prod/.test(pathname)) pageType = 'product';
+                else if (/cat|collectie|categorie|category|shop|winkel/.test(pathname)) pageType = 'category';
+                else if (/info|faq|klantenservice|help|over-ons/.test(pathname)) pageType = 'info';
+                // Try H1, fallback slug
+                const getField = (names) => {
+                    for (const name of names) {
+                        if (row && row[name]) return row[name];
+                    }
+                    return '';
+                };
+                const h1 = getField(['H1','h1','Title','Titel']);
+                const h2 = getField(['H2','h2','Subheader','USP','USPs','Kenmerken','Voordelen']);
+                let topic = h1 || this.titleFromSlug(url);
+                if (!topic) topic = 'Product';
+                let modifier = '';
+                if (pageType === 'product') modifier = 'Bestel online';
+                if (pageType === 'category') modifier = 'Assortiment';
+                if (pageType === 'info') modifier = 'Informatie & Tips';
+                let hasBrand = topic && brand && topic.toLowerCase().includes(brand.toLowerCase());
+                let title = topic;
+                if (h2 && h2.length > 2) title += ' | ' + h2;
+                if (modifier && !title.includes(modifier)) title += ' | ' + modifier;
+                if (brand && !hasBrand) title += ' | ' + brand;
+                return title;
+            }
+            titleFromSlug(url) {
+                try{
+                    const path = new URL(url).pathname;
+                    const slug = path.split('/').filter(Boolean).pop() || '';
+                    if (!slug) return '';
+                    return slug.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                }catch{return ''}
+            }
+            generateTitleFromURL(url, row) {
+                const brand = row && row.Brand ? row.Brand.trim() : '';
+                if (row) return this.buildContextualTitle(row,url,brand);
+                return this.titleFromSlug(url) || 'Pagina Titel';
+            }
+            generateDescriptionFromURL(url, row) {
+                const brand = row && row.Brand ? row.Brand.trim() : '';
+                let base = this.buildContextualTitle(row,url,brand);
+                let details = '';
+                if (row) {
+                    let arr = [];
+                    ['USP','USPs','H2','h2','Voordelen','Kenmerken'].forEach(f=>{if(row[f])arr.push(row[f])});
+                    details = arr.join(' | ');
+                }
+                if(details) base += ' – ' + details;
+                let cta = 'Bekijk nu';
+                if (url && /product/.test(url)) cta = 'Bestel direct';
+                if (url && /categorie|collectie|category/.test(url)) cta = 'Shop het assortiment';
+                return `${base}. ${cta}. ${brand}.`;
+            }
+        }
+
+        const optimizer = new OptimizationEngine();
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        // Full-window drag & drop overlay
+        const dropOverlay = document.createElement('div');
+        dropOverlay.id = 'dropOverlay';
+        dropOverlay.className = 'drop-overlay';
+        dropOverlay.innerHTML = '<div class="drop-overlay-content">📄 Sleep een CSV bestand hierheen en laat los om te uploaden</div>';
+        document.body.appendChild(dropOverlay);
+
+        let globalDragCounter = 0;
+        const isFileDrag = (event) => event.dataTransfer && Array.from(event.dataTransfer.types || []).includes('Files');
+
+        window.addEventListener('dragenter', (e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            globalDragCounter++;
+            dropOverlay.classList.add('active');
+        });
+
+        window.addEventListener('dragover', (e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            dropOverlay.classList.add('active');
+        });
+
+        window.addEventListener('dragleave', (e) => {
+            if (!isFileDrag(e)) return;
+            globalDragCounter = Math.max(globalDragCounter - 1, 0);
+            if (globalDragCounter === 0) {
+                dropOverlay.classList.remove('active');
+            }
+        });
+
+        window.addEventListener('drop', (e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            dropOverlay.classList.remove('active');
+            globalDragCounter = 0;
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+                    handleFile(file);
+                } else {
+                    showAlert('error', 'Alleen CSV bestanden zijn toegestaan');
+                }
+            }
+        });
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'text/csv') {
+                handleFile(file);
+            } else {
+                showAlert('error', 'Alleen CSV bestanden zijn toegestaan');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        function handleFile(file) {
+            // Store filename globally
+            window.uploadedCSVFileName = file.name;
+            
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.errors.length > 0) {
+                        showAlert('error', 'CSV parsing fout: ' + results.errors[0].message);
+                        return;
+                    }
+
+                    csvHeaders = results.meta.fields;
+                    
+                    // Auto-detect columns or show mapper
+                    if (autoDetectColumns(csvHeaders)) {
+                        processCSVData(results.data);
+                    } else {
+                        showColumnMapper(csvHeaders, results.data);
+                    }
+                },
+                error: function(error) {
+                    showAlert('error', 'Fout bij het lezen van het bestand: ' + error.message);
+                }
+            });
+        }
+
+        function autoDetectColumns(headers) {
+            const lowerHeaders = headers.map(h => h.toLowerCase());
+            
+            // Try to auto-detect URL column
+            // Added 'address' for Screaming Frog exports
+            const urlPatterns = ['address', 'url', 'link', 'page', 'pagina'];
+            columnMapping.url = headers.find((h, i) => 
+                urlPatterns.some(p => lowerHeaders[i].includes(p))
+            );
+
+            // Try to auto-detect Title column
+            // Added 'title 1' for Screaming Frog exports
+            const titlePatterns = ['title 1', 'title', 'titel', 'metatitle', 'metatitel', 'meta title', 'page title'];
+            columnMapping.title = headers.find((h, i) => 
+                titlePatterns.some(p => lowerHeaders[i].includes(p))
+            );
+
+            // Try to auto-detect Description column
+            // Added 'meta description 1' for Screaming Frog exports
+            const descPatterns = ['meta description 1', 'description', 'beschrijving', 'metadescription', 'metabeschrijving', 'meta description'];
+            columnMapping.description = headers.find((h, i) => 
+                descPatterns.some(p => lowerHeaders[i].includes(p))
+            );
+
+            // Log detection results for debugging
+            console.log('Auto-detect results:', {
+                url: columnMapping.url,
+                title: columnMapping.title,
+                description: columnMapping.description
+            });
+
+            return columnMapping.url && columnMapping.title && columnMapping.description;
+        }
+
+        function showColumnMapper(headers, data) {
+            const mapper = document.getElementById('columnMapper');
+            mapper.innerHTML = '';
+
+            const fields = [
+                { key: 'url', label: 'URL', required: true },
+                { key: 'title', label: 'Metatitel', required: true },
+                { key: 'description', label: 'Metabeschrijving', required: true }
+            ];
+
+            fields.forEach(field => {
+                const div = document.createElement('div');
+                div.className = 'mapper-field';
+                
+                const label = document.createElement('label');
+                label.textContent = field.label + (field.required ? ' *' : '');
+                
+                const select = document.createElement('select');
+                select.id = `map-${field.key}`;
+                
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = '-- Selecteer kolom --';
+                select.appendChild(emptyOption);
+                
+                headers.forEach(header => {
+                    const option = document.createElement('option');
+                    option.value = header;
+                    option.textContent = header;
+                    if (columnMapping[field.key] === header) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+                
+                div.appendChild(label);
+                div.appendChild(select);
+                mapper.appendChild(div);
+            });
+
+            // Store data temporarily
+            window.tempCSVData = data;
+            
+            document.getElementById('columnMapperModal').classList.add('active');
+        }
+
+        function closeColumnMapper() {
+            document.getElementById('columnMapperModal').classList.remove('active');
+        }
+
+        function applyColumnMapping() {
+            columnMapping.url = document.getElementById('map-url').value;
+            columnMapping.title = document.getElementById('map-title').value;
+            columnMapping.description = document.getElementById('map-description').value;
+
+            if (!columnMapping.url || !columnMapping.title || !columnMapping.description) {
+                showAlert('error', 'Alle verplichte kolommen moeten gekoppeld worden');
+                return;
+            }
+
+            closeColumnMapper();
+            processCSVData(window.tempCSVData);
+        }
+
+        function processCSVData(data) {
+            if (data.length === 0) {
+                showAlert('error', 'CSV bestand is leeg');
+                return;
+            }
+
+            metadataRows = data.map((row, index) => {
+                const url = row[columnMapping.url] || '';
+                const title = row[columnMapping.title] || '';
+                const description = row[columnMapping.description] || '';
+
+                const titleResult = validator.validateTitle(title, currentDevice);
+                const descResult = validator.validateDescription(description, currentDevice);
+
+                return {
+                    id: index,
+                    url: url,
+                    originalTitle: title,
+                    currentTitle: title,
+                    originalDescription: description,
+                    currentDescription: description,
+                    titleResult: titleResult,
+                    descResult: descResult,
+                    selected: false,
+                    optimized: false
+                };
+            });
+
+            originalData = JSON.parse(JSON.stringify(metadataRows));
+
+            showAlert('success', `${metadataRows.length} URLs succesvol geladen`);
+            
+            renderTable();
+            updateStatistics();
+            showControls();
+            
+            // Scroll to statistics section
+            setTimeout(() => {
+                document.getElementById('statsSection').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }, 300);
+        }
+        function showControls() {
+            document.getElementById('statsSection').style.display = 'block';
+            document.getElementById('controlsSection').style.display = 'block';
+            document.getElementById('tableContainer').style.display = 'block';
+            
+            // Show uploaded file info and hide upload area
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInfo = document.getElementById('uploadedFileInfo');
+            const fileName = document.getElementById('uploadedFileName');
+            
+            // Hide the upload area completely
+            uploadArea.style.display = 'none';
+            
+            // Show file info
+            fileInfo.style.display = 'block';
+            fileName.textContent = window.uploadedCSVFileName || 'bestand.csv';
+        }
+        
+        function resetUpload() {
+            if (!confirm('Weet je zeker dat je een nieuw bestand wilt uploaden? Alle huidige data gaat verloren.')) {
+                return;
+            }
+            
+            // Reset all data
+            metadataRows = [];
+            originalData = [];
+            window.uploadedCSVFileName = null;
+            
+            // Hide all sections
+            document.getElementById('statsSection').style.display = 'none';
+            document.getElementById('controlsSection').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            
+            // Show upload area again
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('uploadedFileInfo').style.display = 'none';
+            
+            // Clear file input
+            document.getElementById('fileInput').value = '';
+            
+            showAlert('info', 'Upload gereset - upload een nieuw bestand');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return text;
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            metadataRows.forEach(row => {
+                const tr = document.createElement('tr');
+                if (row.selected) tr.classList.add('selected');
+
+                // Overall status (worst of both)
+                const overallStatus = getWorstStatus(row.titleResult.status, row.descResult.status);
+
+                tr.innerHTML = `
+                    <td class="checkbox-cell">
+                        <input type="checkbox" ${row.selected ? 'checked' : ''} 
+                               onchange="toggleRowSelection(${row.id})">
+                    </td>
+                    <td>
+                        <div class="url-cell" title="${row.url}">${row.url}</div>
+                    </td>
+                    <td class="metadata-cell">
+                        <div class="metadata-text" contenteditable="true" 
+                             data-row-id="${row.id}" data-field="title"
+                             oninput="updateMetadata(${row.id}, 'title', this.textContent)"
+                             onkeydown="if(event.key === 'Enter') { event.preventDefault(); return false; }"
+                             onblur="updateMetadata(${row.id}, 'title', this.textContent)">${escapeHtml(row.currentTitle) || '<em style=\"color: #999;\">Leeg</em>'}</div>
+                        <div class="metadata-info">
+                            <span class="score-badge ${row.titleResult.status}">
+                                ${validator.getStatusIcon(row.titleResult.status)} ${row.titleResult.percentage}%
+                            </span>
+                            <span style="color: #999;">${row.titleResult.width}/${row.titleResult.limit}px</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${row.titleResult.status}" 
+                                 style="width: ${Math.min(row.titleResult.percentage, 100)}%"></div>
+                        </div>
+                        ${(row.optimized && row.originalTitleResult) ? `
+                        <div class="old-metadata">
+                            <div class="old-metadata-label">Origineel:</div>
+                            <div>${escapeHtml(row.originalTitle)}</div>
+                            <span class="score-badge ${row.originalTitleResult.status}" style="font-size: 10px; margin-top: 3px; display: inline-block;">
+                                ${validator.getStatusIcon(row.originalTitleResult.status)} ${row.originalTitleResult.percentage}%
+                            </span>
+                            ${(row.currentTitle === row.originalTitle) ? '<span style="color:#888;font-size:10px;">(Ongewijzigd)</span>' : ''}
+                        </div>
+                        ` : ''}
+                    </td>
+                    <td class="metadata-cell">
+                        <div class="metadata-text" contenteditable="true"
+                             data-row-id="${row.id}" data-field="description"
+                             oninput="updateMetadata(${row.id}, 'description', this.textContent)"
+                             onkeydown="if(event.key === 'Enter') { event.preventDefault(); return false; }"
+                             onblur="updateMetadata(${row.id}, 'description', this.textContent)">${escapeHtml(row.currentDescription) || '<em style=\"color: #999;\">Leeg</em>'}</div>
+                        <div class="metadata-info">
+                            <span class="score-badge ${row.descResult.status}">
+                                ${validator.getStatusIcon(row.descResult.status)} ${row.descResult.percentage}%
+                            </span>
+                            <span style="color: #999;">${row.descResult.width}/${row.descResult.limit}px</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${row.descResult.status}" 
+                                 style="width: ${Math.min(row.descResult.percentage, 100)}%"></div>
+                        </div>
+                        ${(row.optimized && row.originalDescResult) ? `
+                        <div class="old-metadata">
+                            <div class="old-metadata-label">Origineel:</div>
+                            <div>${escapeHtml(row.originalDescription)}</div>
+                            <span class="score-badge ${row.originalDescResult.status}" style="font-size: 10px; margin-top: 3px; display: inline-block;">
+                                ${validator.getStatusIcon(row.originalDescResult.status)} ${row.originalDescResult.percentage}%
+                            </span>
+                            ${(row.currentDescription === row.originalDescription) ? '<span style="color:#888;font-size:10px;">(Ongewijzigd)</span>' : ''}
+                        </div>
+                        ` : ''}
+                    </td>
+                    <td class="status-icon">
+                        ${validator.getStatusIcon(overallStatus)}
+                    </td>
+                    <td>
+                        <div class="row-actions">
+                            <button class="icon-btn" onclick="resetRow(${row.id})" title="Reset">
+                                🔄
+                            </button>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+            updateSelectAllCheckbox();
+        }
+
+        function getWorstStatus(status1, status2) {
+            const priority = { error: 0, warning: 1, good: 2, perfect: 3 };
+            return priority[status1] < priority[status2] ? status1 : status2;
+        }
+
+        function updateStatistics() {
+            const stats = {
+                total: metadataRows.length,
+                error: 0,
+                warning: 0,
+                good: 0,
+                perfect: 0,
+                avgUsage: 0
+            };
+
+            let totalPercentage = 0;
+
+            metadataRows.forEach(row => {
+                const overallStatus = getWorstStatus(row.titleResult.status, row.descResult.status);
+                stats[overallStatus]++;
+                
+                // Average of title and description percentage
+                const avgRowPercentage = (row.titleResult.percentage + row.descResult.percentage) / 2;
+                totalPercentage += avgRowPercentage;
+            });
+
+            stats.avgUsage = Math.round(totalPercentage / stats.total);
+
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="icon">📊</div>
+                    <div class="label">Totaal URLs</div>
+                    <div class="value">${stats.total}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">❌</div>
+                    <div class="label">Fout</div>
+                    <div class="value">${stats.error}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">⚠️</div>
+                    <div class="label">Optimalisatie nodig</div>
+                    <div class="value">${stats.warning}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">💡</div>
+                    <div class="label">Optimalisatie mogelijk</div>
+                    <div class="value">${stats.good}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">✅</div>
+                    <div class="label">Perfect</div>
+                    <div class="value">${stats.perfect}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">📈</div>
+                    <div class="label">Gemiddeld gebruik</div>
+                    <div class="value">${stats.avgUsage}%</div>
+                </div>
+            `;
+        }
+
+        function toggleRowSelection(id) {
+            const row = metadataRows.find(r => r.id === id);
+            if (row) {
+                row.selected = !row.selected;
+                renderTable();
+                updateOptimizeButton();
+            }
+        }
+
+        function toggleAllCheckboxes() {
+            const checked = document.getElementById('selectAllCheckbox').checked;
+            metadataRows.forEach(row => row.selected = checked);
+            renderTable();
+            updateOptimizeButton();
+        }
+
+        function updateSelectAllCheckbox() {
+            const allSelected = metadataRows.length > 0 && metadataRows.every(r => r.selected);
+            document.getElementById('selectAllCheckbox').checked = allSelected;
+        }
+
+        function selectAll() {
+            metadataRows.forEach(row => row.selected = true);
+            renderTable();
+            updateOptimizeButton();
+        }
+
+        function deselectAll() {
+            // Deselect all rows
+            metadataRows.forEach(row => row.selected = false);
+            
+            // Also clear all filter checkboxes
+            document.getElementById('filterError').checked = false;
+            document.getElementById('filterWarning').checked = false;
+            document.getElementById('filterGood').checked = false;
+            document.getElementById('filterPerfect').checked = false;
+            
+            // Update filter checkbox styling
+            document.querySelectorAll('.filter-checkbox').forEach(cb => {
+                cb.classList.remove('active');
+            });
+            
+            renderTable();
+            updateOptimizeButton();
+        }
+
+        function applyFilters() {
+            const filterError = document.getElementById('filterError').checked;
+            const filterWarning = document.getElementById('filterWarning').checked;
+            const filterGood = document.getElementById('filterGood').checked;
+            const filterPerfect = document.getElementById('filterPerfect').checked;
+
+            metadataRows.forEach(row => {
+                const overallStatus = getWorstStatus(row.titleResult.status, row.descResult.status);
+                
+                row.selected = (
+                    (filterError && overallStatus === 'error') ||
+                    (filterWarning && overallStatus === 'warning') ||
+                    (filterGood && overallStatus === 'good') ||
+                    (filterPerfect && overallStatus === 'perfect')
+                );
+            });
+
+            // Update filter checkbox styling
+            document.querySelectorAll('.filter-checkbox').forEach(cb => {
+                const input = cb.querySelector('input');
+                if (input.checked) {
+                    cb.classList.add('active');
+                } else {
+                    cb.classList.remove('active');
+                }
+            });
+
+            renderTable();
+            updateOptimizeButton();
+        }
+
+        function updateOptimizeButton() {
+            const selectedCount = metadataRows.filter(r => r.selected).length;
+            const btn = document.getElementById('optimizeBtn');
+            btn.disabled = selectedCount === 0;
+            btn.textContent = `✨ Optimaliseer geselecteerde (${selectedCount})`;
+        }
+
+        function optimizeSelected() {
+            const selected = metadataRows.filter(r => r.selected);
+            
+            if (selected.length === 0) {
+                showAlert('warning', 'Geen rijen geselecteerd');
+                return;
+            }
+
+            // Show confirmation
+            if (!confirm(`Je gaat ${selected.length} URL(s) optimaliseren. Doorgaan?`)) {
+                return;
+            }
+
+            document.getElementById('loadingIndicator').classList.add('active');
+
+            setTimeout(() => {
+                selected.forEach(row => {
+                    // Always snapshot old info BEFORE each optimization
+                    row.originalTitle = row.currentTitle;
+                    row.originalTitleResult = { ...row.titleResult };
+                    row.originalDescription = row.currentDescription;
+                    row.originalDescResult = { ...row.descResult };
+
+                    // Optimize title
+                    const newTitle = optimizer.optimizeTitle(row.currentTitle, row.url, currentDevice, row);
+                    row.currentTitle = newTitle;
+                    row.titleResult = validator.validateTitle(row.currentTitle, currentDevice);
+
+                    // Optimize description
+                    const newDesc = optimizer.optimizeDescription(row.currentDescription, row.url, currentDevice, row);
+                    row.currentDescription = newDesc;
+                    row.descResult = validator.validateDescription(row.currentDescription, currentDevice);
+
+                    row.optimized = true;
+                });
+
+                document.getElementById('loadingIndicator').classList.remove('active');
+                renderTable();
+                updateStatistics();
+                showAlert('success', `${selected.length} URL(s) succesvol geoptimaliseerd`);
+            }, 500);
+        }
+
+        function updateMetadata(rowId, field, newValue) {
+            // Clear existing timer for this field
+            const timerKey = `${rowId}-${field}`;
+            if (updateTimers[timerKey]) {
+                clearTimeout(updateTimers[timerKey]);
+            }
+            
+            // Set new timer - update after user stops typing
+            updateTimers[timerKey] = setTimeout(() => {
+                const row = metadataRows.find(r => r.id === rowId);
+                if (!row) return;
+
+                // Clean up the value
+                newValue = newValue.trim();
+                
+                if (field === 'title') {
+                    row.currentTitle = newValue;
+                    row.titleResult = validator.validateTitle(newValue, currentDevice);
+                } else if (field === 'description') {
+                    row.currentDescription = newValue;
+                    row.descResult = validator.validateDescription(newValue, currentDevice);
+                }
+
+                // Update only the specific cell's score/progress without re-rendering entire table
+                updateCellDisplay(rowId, field);
+                updateStatistics();
+            }, UPDATE_DELAY);
+        }
+        
+        function updateCellDisplay(rowId, field) {
+            const row = metadataRows.find(r => r.id === rowId);
+            if (!row) return;
+            
+            // Find the cell in the DOM
+            const cells = document.querySelectorAll(`[data-row-id="${rowId}"][data-field="${field}"]`);
+            if (cells.length === 0) return;
+            
+            const cell = cells[0].closest('.metadata-cell');
+            if (!cell) return;
+            
+            const result = field === 'title' ? row.titleResult : row.descResult;
+            
+            // Update metadata info (score badge and pixels)
+            const metadataInfo = cell.querySelector('.metadata-info');
+            if (metadataInfo) {
+                metadataInfo.innerHTML = `
+                    <span class="score-badge ${result.status}">
+                        ${validator.getStatusIcon(result.status)} ${result.percentage}%
+                    </span>
+                    <span style="color: #999;">${result.width}/${result.limit}px</span>
+                `;
+            }
+            
+            // Update progress bar
+            const progressFill = cell.querySelector('.progress-fill');
+            if (progressFill) {
+                progressFill.className = `progress-fill ${result.status}`;
+                progressFill.style.width = `${Math.min(result.percentage, 100)}%`;
+            }
+            
+            // Update or remove old metadata section if it exists
+            const isTitle = field === 'title';
+            const originalText = isTitle ? row.originalTitle : row.originalDescription;
+            const originalResult = isTitle ? row.originalTitleResult : row.originalDescResult;
+            const currentText = isTitle ? row.currentTitle : row.currentDescription;
+            
+            function escapeHtml(text) {
+                if (!text) return text;
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            let oldMetadataDiv = cell.querySelector('.old-metadata');
+            
+            // Show old metadata if: has original result AND current is different from original
+            if (originalResult && originalText !== currentText) {
+                if (!oldMetadataDiv) {
+                    // Create old metadata div if it doesn't exist
+                    oldMetadataDiv = document.createElement('div');
+                    oldMetadataDiv.className = 'old-metadata';
+                    cell.appendChild(oldMetadataDiv);
+                }
+                
+                oldMetadataDiv.innerHTML = `
+                    <div class="old-metadata-label">Origineel:</div>
+                    <div style="margin-top: 4px; margin-bottom: 4px;">${escapeHtml(originalText)}</div>
+                    <span class="score-badge ${originalResult.status}" style="font-size: 9px; padding: 2px 6px; margin-top: 4px; display: inline-block;">
+                        ${validator.getStatusIcon(originalResult.status)} ${originalResult.percentage}%
+                    </span>
+                `;
+            } else if (oldMetadataDiv) {
+                // Remove old metadata div if not needed
+                oldMetadataDiv.remove();
+            }
+            
+            // Update overall status icon in the row
+            const tr = cell.closest('tr');
+            if (tr) {
+                const overallStatus = getWorstStatus(row.titleResult.status, row.descResult.status);
+                const statusIcon = tr.querySelector('.status-icon');
+                if (statusIcon) {
+                    statusIcon.textContent = validator.getStatusIcon(overallStatus);
+                }
+                
+                // Update row selection class
+                if (row.selected) {
+                    tr.classList.add('selected');
+                } else {
+                    tr.classList.remove('selected');
+                }
+            }
+        }
+
+        function resetRow(id) {
+            const row = metadataRows.find(r => r.id === id);
+            const original = originalData.find(r => r.id === id);
+            
+            if (row && original) {
+                row.currentTitle = original.currentTitle;
+                row.currentDescription = original.currentDescription;
+                row.titleResult = validator.validateTitle(row.currentTitle, currentDevice);
+                row.descResult = validator.validateDescription(row.currentDescription, currentDevice);
+                row.optimized = false;
+                
+                // Reset to original CSV values (not null!)
+                row.originalTitle = original.originalTitle;
+                row.originalDescription = original.originalDescription;
+                // Clear optimization tracking
+                row.originalTitleResult = null;
+                row.originalDescResult = null;
+                
+                renderTable();
+                updateStatistics();
+                showAlert('info', 'Rij gereset naar origineel');
+            }
+        }
+
+        function resetAll() {
+            if (!confirm('Weet je zeker dat je alle wijzigingen wilt resetten?')) {
+                return;
+            }
+
+            metadataRows = JSON.parse(JSON.stringify(originalData));
+            renderTable();
+            updateStatistics();
+            showAlert('info', 'Alle rijen gereset naar origineel');
+        }
+
+        function switchDevice(device) {
+            currentDevice = device;
+            
+            // Update button states
+            document.querySelectorAll('.device-btn').forEach(btn => {
+                if (btn.dataset.device === device) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Recalculate all validations
+            metadataRows.forEach(row => {
+                row.titleResult = validator.validateTitle(row.currentTitle, currentDevice);
+                row.descResult = validator.validateDescription(row.currentDescription, currentDevice);
+            });
+
+            renderTable();
+            updateStatistics();
+            showAlert('info', `Geschakeld naar ${device === 'mobile' ? 'Mobile' : 'Desktop'} optimalisatie`);
+        }
+
+        function exportCSV() {
+            const exportData = metadataRows.map(row => {
+                const titleChanged = row.currentTitle !== row.originalTitle;
+                const descChanged = row.currentDescription !== row.originalDescription;
+                
+                // Determine action
+                let action = 'Geen wijziging';
+                if (titleChanged && descChanged) {
+                    action = 'Beide aanpassen';
+                } else if (titleChanged) {
+                    action = 'Metatitel aanpassen';
+                } else if (descChanged) {
+                    action = 'Metabeschrijving aanpassen';
+                }
+
+                return {
+                    'Actie': action,
+                    'URL': row.url,
+                    'Oude Metatitel': row.originalTitle || '',
+                    'Nieuwe Metatitel': titleChanged ? row.currentTitle : '',
+                    'Oude Metabeschrijving': row.originalDescription || '',
+                    'Nieuwe Metabeschrijving': descChanged ? row.currentDescription : ''
+                };
+            });
+
+            const csv = Papa.unparse(exportData);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `optimized-metadata-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showAlert('success', 'CSV bestand succesvol gedownload');
+        }
+
+        function showAlert(type, message) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} active`;
+            alert.innerHTML = `
+                <strong>${type === 'error' ? '❌ Fout' : type === 'success' ? '✅ Succes' : type === 'warning' ? '⚠️ Waarschuwing' : 'ℹ️ Info'}:</strong> ${message}
+            `;
+            
+            container.innerHTML = '';
+            container.appendChild(alert);
+
+            setTimeout(() => {
+                alert.classList.remove('active');
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
